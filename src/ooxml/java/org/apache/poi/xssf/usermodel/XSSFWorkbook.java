@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,10 +38,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.namespace.QName;
 
-import org.apache.poi.POIXMLDocument;
-import org.apache.poi.POIXMLDocumentPart;
-import org.apache.poi.POIXMLException;
-import org.apache.poi.POIXMLProperties;
+import org.apache.poi.*;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
@@ -140,6 +138,38 @@ public class XSSFWorkbook extends POIXMLDocument implements Workbook, Iterable<X
      * this holds the XSSFName objects attached to this workbook
      */
     private List<XSSFName> namedRanges;
+
+    public SharedStringsTable updateSharedStringSource(SharedStringsTable newSource) {
+        removeRelation(sharedStringSource,true);
+        this.sharedStringSource = createSSTSourceBasedOnNewSST(newSource);
+        return sharedStringSource;
+    }
+
+    private SharedStringsTable createSSTSourceBasedOnNewSST(final SharedStringsTable table) {
+        return (SharedStringsTable) createRelationship(XSSFRelation.SHARED_STRINGS, new POIXMLFactory() {
+            @Override
+            public POIXMLDocumentPart createDocumentPart(POIXMLDocumentPart parent, PackageRelationship rel, PackagePart part) {
+                try {
+                    Class<? extends POIXMLDocumentPart> cls = table.getClass();
+                    Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor(PackagePart.class, PackageRelationship.class);
+                    return constructor.newInstance(part, rel);
+                } catch (Exception e) {
+                    throw new POIXMLException(e);
+                }
+            }
+
+            @Override
+            public POIXMLDocumentPart newDocumentPart(POIXMLRelation descriptor) {
+                try {
+                    Class<? extends POIXMLDocumentPart> cls = table.getClass();
+                    Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor();
+                    return constructor.newInstance();
+                } catch (Exception e) {
+                    throw new POIXMLException(e);
+                }
+            }
+        });
+    }
 
     /**
      * shared string table - a cache of strings in this workbook

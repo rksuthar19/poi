@@ -44,6 +44,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.util.TempFile;
+import org.apache.poi.xssf.model.DBMappedSharedStringsTable;
 import org.apache.poi.xssf.model.SharedStringsTable;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -71,6 +72,7 @@ public class SXSSFWorkbook implements Workbook
      * via getRow() anymore.
      */
     public static final int DEFAULT_WINDOW_SIZE = 100;
+    private boolean isDBMappedSharedStringsTable = false;
 
     XSSFWorkbook _wb;
 
@@ -231,6 +233,15 @@ public class SXSSFWorkbook implements Workbook
             }
         }
     }
+
+    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable,boolean useDBMappedSharedStringsTable){
+        this(workbook,rowAccessWindowSize,compressTmpFiles,true);
+        this.isDBMappedSharedStringsTable=useDBMappedSharedStringsTable;
+        if(useDBMappedSharedStringsTable){
+            _sharedStringSource = _wb.updateSharedStringSource(new DBMappedSharedStringsTable());
+        }
+    }
+
     /**
      * Construct an empty workbook and specify the window for row access.
      * <p>
@@ -350,10 +361,20 @@ public class SXSSFWorkbook implements Workbook
                         {
                             xis.close();
                         }
+                    } else {
+                        if (isDBMappedSharedStringsTable && ze.getName().equals("xl/sharedStrings.xml")) {
+                            DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
+                            if (_sst != null) {
+                                is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
+                                copyStream(is, zos);
+                                _sst.getTemp_shared_string_file().delete();
+                            } else {
+                                copyStream(is, zos);
                     }
-                    else
-                    {
+                        }
+                        else {
                         copyStream(is, zos);
+                        }
                     }
                     is.close();
                 }
