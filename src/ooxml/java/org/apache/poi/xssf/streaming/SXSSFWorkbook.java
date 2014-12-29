@@ -80,7 +80,6 @@ public class SXSSFWorkbook implements Workbook
      * via getRow() anymore.
      */
     public static final int DEFAULT_WINDOW_SIZE = 100;
-    private boolean isDBMappedSharedStringsTable = false;
 
     XSSFWorkbook _wb;
 
@@ -245,7 +244,6 @@ public class SXSSFWorkbook implements Workbook
     public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedStringsTable) {
         this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
         if (useDBMappedSharedStringsTable) {
-            this.isDBMappedSharedStringsTable = true;
             _wb.removeRelation(_sharedStringSource, true);
             this._sharedStringSource = (SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());
         }
@@ -397,7 +395,7 @@ public class SXSSFWorkbook implements Workbook
                             xis.close();
                         }
                     } else {
-                        if (isDBMappedSharedStringsTable && ze.getName().equals("xl/sharedStrings.xml")) {
+                        if (DBMappedSharedStringsTable.class.isInstance(_sharedStringSource) && ze.getName().equals("xl/sharedStrings.xml")) {
                             DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
                             if (_sst != null) {
                                 is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
@@ -405,10 +403,9 @@ public class SXSSFWorkbook implements Workbook
                                 _sst.getTemp_shared_string_file().delete();
                             } else {
                                 copyStream(is, zos);
-                    }
-                        }
-                        else {
-                        copyStream(is, zos);
+                            }
+                        } else {
+                            copyStream(is, zos);
                         }
                     }
                     is.close();
