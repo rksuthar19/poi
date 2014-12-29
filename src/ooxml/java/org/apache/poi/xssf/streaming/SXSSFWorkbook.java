@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Constructor;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +32,13 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.poi.POIXMLDocumentPart;
+import org.apache.poi.POIXMLException;
+import org.apache.poi.POIXMLFactory;
+import org.apache.poi.POIXMLRelation;
 import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.openxml4j.opc.PackagePart;
+import org.apache.poi.openxml4j.opc.PackageRelationship;
 import org.apache.poi.ss.formula.udf.UDFFinder;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CreationHelper;
@@ -46,6 +53,7 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.util.TempFile;
 import org.apache.poi.xssf.model.DBMappedSharedStringsTable;
 import org.apache.poi.xssf.model.SharedStringsTable;
+import org.apache.poi.xssf.usermodel.XSSFRelation;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -234,12 +242,39 @@ public class SXSSFWorkbook implements Workbook
         }
     }
 
-    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable,boolean useDBMappedSharedStringsTable){
-        this(workbook,rowAccessWindowSize,compressTmpFiles,true);
-        this.isDBMappedSharedStringsTable=useDBMappedSharedStringsTable;
-        if(useDBMappedSharedStringsTable){
-            _sharedStringSource = _wb.updateSharedStringSource(new DBMappedSharedStringsTable());
+    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedStringsTable) {
+        this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
+        if (useDBMappedSharedStringsTable) {
+            this.isDBMappedSharedStringsTable = true;
+            _wb.removeRelation(_sharedStringSource, true);
+            this._sharedStringSource = (SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());
         }
+    }
+
+    private POIXMLFactory getDBMappedSSTFactory() {
+        return new POIXMLFactory() {
+            @Override
+            public POIXMLDocumentPart createDocumentPart(POIXMLDocumentPart parent, PackageRelationship rel, PackagePart part) {
+                try {
+                    Class<? extends POIXMLDocumentPart> cls = DBMappedSharedStringsTable.class;
+                    Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor(PackagePart.class, PackageRelationship.class);
+                    return constructor.newInstance(part, rel);
+                } catch (Exception e) {
+                    throw new POIXMLException(e);
+                }
+            }
+
+            @Override
+            public POIXMLDocumentPart newDocumentPart(POIXMLRelation descriptor) {
+                try {
+                    Class<? extends POIXMLDocumentPart> cls = DBMappedSharedStringsTable.class;
+                    Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor();
+                    return constructor.newInstance();
+                } catch (Exception e) {
+                    throw new POIXMLException(e);
+                }
+            }
+        };
     }
 
     /**
