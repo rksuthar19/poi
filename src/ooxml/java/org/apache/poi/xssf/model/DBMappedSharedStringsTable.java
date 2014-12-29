@@ -45,15 +45,15 @@ import java.util.List;
 public class DBMappedSharedStringsTable extends SharedStringsTable implements AutoCloseable{
 
     /**
-     * Maps strings and their indexes in the <code>recordVsIndexBasedSTMap</code> map db
+     * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
      */
-    private DB recordVsIndexMapDB;
-    private HTreeMap<String, Integer> recordVsIndexBasedSTMap; //string vs index map to lookup existing record in stTable
+    private DB stringVsIndexMapDB;
+    private HTreeMap<String, Integer> stringVsIndexSTMap; //string vs index map to lookup existing record in stTable
     /**
-     * Maps strings and their indexes in the <code>recordVsIndexBasedSTMap</code> map db
+     * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
      */
-    private DB indexVsRecordMapDB;
-    private HTreeMap<Integer, String> indexVsRecordBasedSTMap; //index vs string map to retrieve record with index
+    private DB indexVsStringMapDB;
+    private HTreeMap<Integer, String> indexVsStringSTMap; //index vs string map to retrieve record with index
 
     private final File temp_shared_string_file;
 
@@ -119,31 +119,31 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
     }
 
     private void initMapDbBasedSharedStringTableMap() {
-        initRecordVsIndexBasedMapDB();
-        initIndexVsRecordBasedMapDB();
+        initStringVsIndexBasedMapDB();
+        initIndexVsStringBasedMapDB();
     }
 
-    private void initRecordVsIndexBasedMapDB() {
+    private void initStringVsIndexBasedMapDB() {
         File mapDbFile = createTempFile(new BigInteger(130, new SecureRandom()).toString(32), "");//creating random name file to store map db
-        recordVsIndexMapDB = DBMaker.newFileDB(mapDbFile)
+        stringVsIndexMapDB = DBMaker.newFileDB(mapDbFile)
                 .transactionDisable()
                 .cacheHardRefEnable()
                 .cacheSize(65536)
                 .deleteFilesAfterClose()
                 .mmapFileEnablePartial()
                 .closeOnJvmShutdown().make();
-        recordVsIndexBasedSTMap = recordVsIndexMapDB.createHashMap(new BigInteger(130, new SecureRandom()).toString(32)).make();
+        stringVsIndexSTMap = stringVsIndexMapDB.createHashMap(new BigInteger(130, new SecureRandom()).toString(32)).make();
     }
 
-    private void initIndexVsRecordBasedMapDB() {
+    private void initIndexVsStringBasedMapDB() {
         File mapDb2File = createTempFile(new BigInteger(130, new SecureRandom()).toString(32), "");//creating random name file to store map db
-        indexVsRecordMapDB = DBMaker.newFileDB(mapDb2File)
+        indexVsStringMapDB = DBMaker.newFileDB(mapDb2File)
                 .transactionDisable()
-                .cacheDisable() //caching not required indexVsRecordBasedSTMap will be used to write all existing values
+                .cacheDisable() //caching not required indexVsStringSTMap will be used to write all existing values
                 .deleteFilesAfterClose()
                 .mmapFileEnablePartial()
                 .closeOnJvmShutdown().make();
-        indexVsRecordBasedSTMap = indexVsRecordMapDB.createHashMap(new BigInteger(130, new SecureRandom()).toString(32)).make();
+        indexVsStringSTMap = indexVsStringMapDB.createHashMap(new BigInteger(130, new SecureRandom()).toString(32)).make();
     }
 
     /**
@@ -162,8 +162,8 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
             uniqueCount = (int) sst.getUniqueCount();
             for (CTRst st : sst.getSiArray()) {
                 String key = getKey(st);
-                recordVsIndexBasedSTMap.put(key, cnt);
-                indexVsRecordBasedSTMap.put(cnt, key);
+                stringVsIndexSTMap.put(key, cnt);
+                indexVsStringSTMap.put(cnt, key);
                 cnt++;
             }
         } catch (XmlException e) {
@@ -183,7 +183,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      */
     public CTRst getEntryAt(int idx) {
         try {
-            return CTRst.Factory.parse(indexVsRecordBasedSTMap.get(idx), out_options);
+            return CTRst.Factory.parse(indexVsStringSTMap.get(idx), out_options);
         } catch (XmlException e) {
             throw new RuntimeException("Error Parsing xmlText from SSTable");
         }
@@ -224,12 +224,12 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
     public int addEntry(CTRst st) {
         String s = getKey(st);
         count++;
-        if (recordVsIndexBasedSTMap.containsKey(s)) {
-            return recordVsIndexBasedSTMap.get(s);
+        if (stringVsIndexSTMap.containsKey(s)) {
+            return stringVsIndexSTMap.get(s);
         }
         //new unique record
-        recordVsIndexBasedSTMap.put(s, uniqueCount);
-        indexVsRecordBasedSTMap.put(uniqueCount, s);
+        stringVsIndexSTMap.put(s, uniqueCount);
+        indexVsStringSTMap.put(uniqueCount, s);
         return uniqueCount++;
     }
     /**
@@ -274,7 +274,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
 
     private void addStringItems(Writer writer) throws XMLStreamException, IOException {
         for (int i = 0; i < uniqueCount; i++) {
-            String s = indexVsRecordBasedSTMap.get(i);
+            String s = indexVsStringSTMap.get(i);
             writer.write("<si>");
             writer.write(s);
             writer.write("</si>");
@@ -303,9 +303,9 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
 
     @Override
     public void close() throws Exception {
-        recordVsIndexBasedSTMap.clear();
-        indexVsRecordBasedSTMap.clear();
-        recordVsIndexMapDB.close();
-        indexVsRecordMapDB.close();
+        stringVsIndexSTMap.clear();
+        indexVsStringSTMap.clear();
+        stringVsIndexMapDB.close();
+        indexVsStringMapDB.close();
     }
 }
