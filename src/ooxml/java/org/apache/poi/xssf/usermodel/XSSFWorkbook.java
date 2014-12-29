@@ -141,12 +141,12 @@ public class XSSFWorkbook extends POIXMLDocument implements Workbook, Iterable<X
 
     public SharedStringsTable updateSharedStringSource(SharedStringsTable newSource) {
         removeRelation(sharedStringSource,true);
-        this.sharedStringSource = createSSTSourceBasedOnNewSST(newSource);
+        this.sharedStringSource = (SharedStringsTable) createRelationship(XSSFRelation.SHARED_STRINGS, getSSTFactory(newSource));
         return sharedStringSource;
     }
 
-    private SharedStringsTable createSSTSourceBasedOnNewSST(final SharedStringsTable table) {
-        return (SharedStringsTable) createRelationship(XSSFRelation.SHARED_STRINGS, new POIXMLFactory() {
+    private POIXMLFactory getSSTFactory(final SharedStringsTable table) {
+        return new POIXMLFactory() {
             @Override
             public POIXMLDocumentPart createDocumentPart(POIXMLDocumentPart parent, PackageRelationship rel, PackagePart part) {
                 try {
@@ -168,7 +168,7 @@ public class XSSFWorkbook extends POIXMLDocument implements Workbook, Iterable<X
                     throw new POIXMLException(e);
                 }
             }
-        });
+        };
     }
 
     /**
