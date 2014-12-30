@@ -397,16 +397,12 @@ public class SXSSFWorkbook implements Workbook
                             xis.close();
                         }
                     } else {
-                        if (DBMappedSharedStringsTable.class.isInstance(_sharedStringSource) && ze.getName().equals("xl/sharedStrings.xml")) {
+                        if (ze.getName().equals("xl/sharedStrings.xml") && DBMappedSharedStringsTable.class.isInstance(_sharedStringSource)) {
                             DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
-                            if (_sst != null) {
                                 _sst.commit();
                                 is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
                                 copyStream(is, zos);
                                 _sst.getTemp_shared_string_file().delete();
-                            } else {
-                                copyStream(is, zos);
-                            }
                         } else {
                             copyStream(is, zos);
                         }
