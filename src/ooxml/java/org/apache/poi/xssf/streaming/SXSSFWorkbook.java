@@ -191,7 +191,7 @@ public class SXSSFWorkbook implements Workbook
      * @param compressTmpFiles whether to use gzip compression for temporary files
      */
     public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles){
-    	this(workbook,rowAccessWindowSize, compressTmpFiles, false);
+    	this(workbook, rowAccessWindowSize, compressTmpFiles, false);
     }
 
     /**
@@ -241,9 +241,9 @@ public class SXSSFWorkbook implements Workbook
         }
     }
 
-    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useMapDBSharedString) {
+    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedString) {
         this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
-        if (useMapDBSharedString) {
+        if (useDBMappedSharedString) {
             //_wb.removeRelation(_sharedStringSource, true);
             /*(SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());*/
             //need not to remove existing relation , default will be created which will be replaced at the end while writing
