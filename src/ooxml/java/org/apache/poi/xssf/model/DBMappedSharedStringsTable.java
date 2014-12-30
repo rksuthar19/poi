@@ -41,12 +41,14 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
      */
     private DB stringVsIndexMapDB;
-    private HTreeMap<String, Integer> stringVsIndexSTMap; //string vs index map to lookup existing record in stTable look at add entry method
+    //string vs index map to lookup existing record in stTable look at add entry method
+    private HTreeMap<String, Integer> stringVsIndexSTMap;
     /**
      * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
      */
     private DB indexVsStringMapDB;
-    private HTreeMap<Integer, String> indexVsStringSTMap; //index vs string map to retrieve record with index
+    //index vs string map to retrieve record with index
+    private HTreeMap<Integer, String> indexVsStringSTMap;
 
     private final File temp_shared_string_file;
 
@@ -64,7 +66,6 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
     private int uniqueCount;
 
     private final static XmlOptions options = new XmlOptions();
-    private final static XmlOptions out_options = new XmlOptions();
 
 
     static {
