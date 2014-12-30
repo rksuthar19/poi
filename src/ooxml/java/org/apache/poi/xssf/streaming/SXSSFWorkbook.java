@@ -241,40 +241,14 @@ public class SXSSFWorkbook implements Workbook
         }
     }
 
-    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedStringsTable) {
+    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useMapDBSharedString) {
         this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
-        if (useDBMappedSharedStringsTable) {
+        if (useMapDBSharedString) {
             //_wb.removeRelation(_sharedStringSource, true);
-          /*(SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());*/
+            /*(SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());*/
             //need not to remove existing relation , default will be created which will be replaced at the end while writing
             this._sharedStringSource = new DBMappedSharedStringsTable();
         }
-    }
-
-    private POIXMLFactory getDBMappedSSTFactory() {
-        return new POIXMLFactory() {
-            @Override
-            public POIXMLDocumentPart createDocumentPart(POIXMLDocumentPart parent, PackageRelationship rel, PackagePart part) {
-                try {
-                    Class<? extends POIXMLDocumentPart> cls = DBMappedSharedStringsTable.class;
-                    Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor(PackagePart.class, PackageRelationship.class);
-                    return constructor.newInstance(part, rel);
-                } catch (Exception e) {
-                    throw new POIXMLException(e);
-                }
-            }
-
-            @Override
-            public POIXMLDocumentPart newDocumentPart(POIXMLRelation descriptor) {
-                try {
-                    Class<? extends POIXMLDocumentPart> cls = DBMappedSharedStringsTable.class;
-                    Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor();
-                    return constructor.newInstance();
-                } catch (Exception e) {
-                    throw new POIXMLException(e);
-                }
-            }
-        };
     }
 
     /**
