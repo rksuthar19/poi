@@ -3,6 +3,7 @@ package org.apache.poi.xssf.streaming;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.model.SharedStringsTableType;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.After;
 import org.junit.Before;
@@ -32,7 +33,7 @@ public class TestDBMappedSharedStringsTableOption {
 
     private void setupWorkBook() {
         XSSFWorkbook wb = new XSSFWorkbook();
-        workbook = new SXSSFWorkbook(wb, 2, false, true, true);
+        workbook = new SXSSFWorkbook(wb, 2, false, SharedStringsTableType.LOW_FOOTPRINT_MAP_DB_SST);
     }
 
     private void setupBlankSheet() {
