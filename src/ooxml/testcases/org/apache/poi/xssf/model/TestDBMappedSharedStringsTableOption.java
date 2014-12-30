@@ -106,9 +106,6 @@ public class TestDBMappedSharedStringsTableOption {
 
     private void writeAndAssertRecord(int recordCount) {
         System.out.print("Started writing.....");
-        //NOTE: all tests can be executed within -Xmx100M by commenting out out code below
-        //----
-        /*XSSFWorkbook wb = (XSSFWorkbook) SXSSFITestDataProvider.instance.writeOutAndReadBack(workbook);*/
         try {
             FileOutputStream out = new FileOutputStream(outputFile);
             workbook.write(out);
@@ -117,6 +114,8 @@ public class TestDBMappedSharedStringsTableOption {
             assertTrue("Excel File Creation Failed: " + e.getMessage(), false);
         }
         System.out.println("File creation done...Asserting");
+
+        //NOTE: all tests can be executed within -Xmx100M by commenting out assertion code below
 
         try {
             assertRows(new XSSFWorkbook(outputFile), recordCount);
