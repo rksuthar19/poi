@@ -25,6 +25,7 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.util.TempFile;
 import org.apache.poi.xssf.model.DBMappedSharedStringsTable;
 import org.apache.poi.xssf.model.SharedStringsTable;
+import org.apache.poi.xssf.model.SharedStringsTableType;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -241,15 +242,11 @@ public class SXSSFWorkbook implements Workbook
      * @param workbook  the template workbook
      * @param rowAccessWindowSize
      * @param compressTmpFiles whether to use gzip compression for temporary files
-     * @param useSharedStringsTable whether to use a shared strings table
-     * @param useDBMappedSharedString whether to use default in memory SharedStringsTable or low footprint MapDB based DBMappedSharedStringsTable
+     *@param sharedStringsTableType whether to use default shared string or custom
      */
-    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedString) {
-        this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
-        if (useDBMappedSharedString) {
-            //_wb.removeRelation(_sharedStringSource, true);
-            /*(SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());*/
-            //need not to remove existing relation , default will be created which will be replaced at the end while writing
+    public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, SharedStringsTableType sharedStringsTableType) {
+        this(workbook, rowAccessWindowSize, compressTmpFiles, true);
+        if (sharedStringsTableType == SharedStringsTableType.LOW_FOOTPRINT_MAP_DB_SST) {
             this._sharedStringSource = new DBMappedSharedStringsTable();
         }
     }
@@ -374,15 +371,8 @@ public class SXSSFWorkbook implements Workbook
                             xis.close();
                         }
                     } else {
-                        if (ze.getName().equals("xl/sharedStrings.xml") && DBMappedSharedStringsTable.class.isInstance(_sharedStringSource)) {
-                            DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
-                            //DBMappedSharedStringsTable is not registered in POIXMLDocument relations so calling commit to create sharedStringsTable xml file
-                            _sst.commit();
-                            is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
-                            copyStream(is, zos);
-                            if (_sst.getTemp_shared_string_file().delete()) {
-                                throw new IOException("Could not delete temporary file after processing: " + _sst.getTemp_shared_string_file().getName());
-                            }
+                        if (isDBMappedSharedStringsTableEntry(ze)) {
+                            injectSharedStringFromTempFile(zos);
                         } else {
                             copyStream(is, zos);
                         }
@@ -400,6 +390,22 @@ public class SXSSFWorkbook implements Workbook
             zip.close();
         }
     }
+
+    private boolean isDBMappedSharedStringsTableEntry(ZipEntry ze) {
+        return ze.getName().equals("xl/sharedStrings.xml") && DBMappedSharedStringsTable.class.isInstance(_sharedStringSource);
+    }
+
+    private void injectSharedStringFromTempFile(ZipOutputStream zos) throws IOException {
+        DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
+        _sst.commit();//creating DBMapped SharedStringsTable.xml file
+        InputStream is = _sst.getSharedStringInputStream(); //injecting DBMapped SharedStringsTable.xml file in target output
+        copyStream(is, zos);
+        is.close();
+        if (!_sst.getTemp_shared_string_file().delete()) {
+            throw new IOException("Could not delete temporary file after processing: " + _sst.getTemp_shared_string_file().getName());
+        }
+    }
+
     private static void copyStream(InputStream in, OutputStream out) throws IOException {
         byte[] chunk = new byte[1024];
         int count;

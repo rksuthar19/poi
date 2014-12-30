@@ -17,25 +17,18 @@
 
 package org.apache.poi.xssf.model;
 
-import org.apache.poi.openxml4j.opc.PackagePart;
-import org.apache.poi.openxml4j.opc.PackageRelationship;
 import org.apache.poi.util.TempFile;
-import org.apache.xmlbeans.XmlException;
 import org.apache.xmlbeans.XmlOptions;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTRst;
-import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSst;
-import org.openxmlformats.schemas.spreadsheetml.x2006.main.SstDocument;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.*;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 /**
  * SharedStringsTable With Map DB implementation
@@ -48,7 +41,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
      */
     private DB stringVsIndexMapDB;
-    private HTreeMap<String, Integer> stringVsIndexSTMap; //string vs index map to lookup existing record in stTable
+    private HTreeMap<String, Integer> stringVsIndexSTMap; //string vs index map to lookup existing record in stTable look at add entry method
     /**
      * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
      */
@@ -70,8 +63,6 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      */
     private int uniqueCount;
 
-    private SstDocument _sstDoc;
-
     private final static XmlOptions options = new XmlOptions();
     private final static XmlOptions out_options = new XmlOptions();
 
@@ -81,29 +72,12 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
         options.put(XmlOptions.SAVE_AGGRESSIVE_NAMESPACES);
         options.put(XmlOptions.SAVE_USE_DEFAULT_NAMESPACE);
         options.setSaveImplicitNamespaces(Collections.singletonMap("", "http://schemas.openxmlformats.org/spreadsheetml/2006/main"));
-
-        out_options.setLoadSubstituteNamespaces(Collections.singletonMap("", "http://schemas.openxmlformats.org/spreadsheetml/2006/main"));   //TODO add options if required
     }
 
     public DBMappedSharedStringsTable() {
         super();
         temp_shared_string_file = createTempFile("poi-shared-string-table", ".xml");
         initMapDbBasedSharedStringTableMap();
-    }
-
-    private File createTempFile(String prefix, String suffix) {
-        try {
-            return TempFile.createTempFile(prefix, suffix);
-        } catch (IOException e) {
-            throw new RuntimeException("Couldn't create required temp file", e);
-        }
-    }
-
-    public DBMappedSharedStringsTable(PackagePart part, PackageRelationship rel) throws IOException {
-        super(part, rel);//TODO needs to be commented out whiler reading
-        temp_shared_string_file = createTempFile("poi-shared-string-table", ".xml");
-        initMapDbBasedSharedStringTableMap();
-        readFrom(part.getInputStream());
     }
 
     public FileInputStream getSharedStringInputStream() throws IOException {
@@ -118,17 +92,25 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
         return temp_shared_string_file;
     }
 
+    private File createTempFile(String prefix, String suffix) {
+        try {
+            return TempFile.createTempFile(prefix, suffix);
+        } catch (IOException e) {
+            throw new RuntimeException("Couldn't create required temp file", e);
+        }
+    }
+
     private void initMapDbBasedSharedStringTableMap() {
         initStringVsIndexBasedMapDB();
         initIndexVsStringBasedMapDB();
     }
 
     private void initStringVsIndexBasedMapDB() {
-        File mapDbFile = createTempFile(new BigInteger(130, new SecureRandom()).toString(32), "");//creating random name file to store map db
-        stringVsIndexMapDB = DBMaker.newFileDB(mapDbFile)
+        int HARD_REF_CACHE_INITIAL_CAPACITY = 65536;//for HardRef cache it is initial capacity of underlying table (HashMap) Default cache size is 32768 setting it to 65536
+        stringVsIndexMapDB = DBMaker.newFileDB(createTempFile("stringVsIndexMapDBFile", ""))
                 .transactionDisable()
                 .cacheHardRefEnable()
-                .cacheSize(65536)
+                .cacheSize(HARD_REF_CACHE_INITIAL_CAPACITY)
                 .deleteFilesAfterClose()
                 .mmapFileEnablePartial()
                 .closeOnJvmShutdown().make();
@@ -136,8 +118,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
     }
 
     private void initIndexVsStringBasedMapDB() {
-        File mapDb2File = createTempFile(new BigInteger(130, new SecureRandom()).toString(32), "");//creating random name file to store map db
-        indexVsStringMapDB = DBMaker.newFileDB(mapDb2File)
+        indexVsStringMapDB = DBMaker.newFileDB(createTempFile("indexVsStringMapDBFile", ""))
                 .transactionDisable()
                 .cacheDisable() //caching not required indexVsStringSTMap will be used to write all existing values
                 .deleteFilesAfterClose()
@@ -146,47 +127,8 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
         indexVsStringSTMap = indexVsStringMapDB.createHashMap(new BigInteger(130, new SecureRandom()).toString(32)).make();
     }
 
-    /**
-     * Read this shared strings table from an XML file.
-     *
-     * @param is The input stream containing the XML document.
-     * @throws java.io.IOException if an error occurs while reading.
-     */
-    @SuppressWarnings("deprecation") //YK: getXYZArray() array accessors are deprecated in xmlbeans with JDK 1.5 support
-    public void readFrom(InputStream is) throws IOException {
-        try {
-            int cnt = 0;
-            _sstDoc = SstDocument.Factory.parse(is);
-            CTSst sst = _sstDoc.getSst();
-            count = (int) sst.getCount();
-            uniqueCount = (int) sst.getUniqueCount();
-            for (CTRst st : sst.getSiArray()) {
-                String key = getKey(st);
-                stringVsIndexSTMap.put(key, cnt);
-                indexVsStringSTMap.put(cnt, key);
-                cnt++;
-            }
-        } catch (XmlException e) {
-            throw new IOException(e.getLocalizedMessage());
-        }
-    }
-
     private String getKey(CTRst st) {
         return st.xmlText(options);
-    }
-
-    /**
-     * Return a string item by index
-     *
-     * @param idx index of item to return.
-     * @return the item at the specified position in this Shared String table.
-     */
-    public CTRst getEntryAt(int idx) {
-        try {
-            return CTRst.Factory.parse(indexVsStringSTMap.get(idx), out_options);
-        } catch (XmlException e) {
-            throw new RuntimeException("Error Parsing xmlText from SSTable");
-        }
     }
 
     /**
@@ -195,6 +137,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      *
      * @return the total count of strings in the workbook
      */
+    @Override
     public int getCount() {
         return count;
     }
@@ -206,6 +149,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      *
      * @return the total count of unique strings in the workbook
      */
+    @Override
     public int getUniqueCount() {
         return uniqueCount;
     }
@@ -221,6 +165,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
      * @param st the entry to add
      * @return index the index of added entry
      */
+    @Override
     public int addEntry(CTRst st) {
         String s = getKey(st);
         count++;
@@ -233,17 +178,19 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
         return uniqueCount++;
     }
 
-    /**
-     * Provide low-level access to the underlying array of CTRst beans
-     *
-     * @return array of CTRst beans
-     */
-    public List<CTRst> getItems() {
-        List<CTRst> beans = new ArrayList<CTRst>();
-        for (int i = 0; i < uniqueCount; i++) {
-            beans.add(getEntryAt(i));
-        }
-        return beans;
+    @Override
+    public void commit() throws IOException {
+        FileOutputStream sharedStringOutputStream = getSharedStringsTableOutputStream();
+        writeTo(sharedStringOutputStream);
+        sharedStringOutputStream.close();
+    }
+
+    @Override
+    public void close() throws Exception {
+        stringVsIndexSTMap.clear();
+        indexVsStringSTMap.clear();
+        stringVsIndexMapDB.close();
+        indexVsStringMapDB.close();
     }
 
     /**
@@ -284,29 +231,5 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
 
     private void addEndDocument(Writer writer) throws XMLStreamException, IOException {
         writer.write("</sst>");
-    }
-
-    @Override
-    public void commit() throws IOException {
-        // createDefaultSSTTableXml();
-        FileOutputStream sharedStringOutputStream = getSharedStringsTableOutputStream();
-        writeTo(sharedStringOutputStream);
-        sharedStringOutputStream.close();
-    }
-
-    private void createDefaultSSTTableXml() throws IOException {         //Todo, check if needed to create default one
-        _sstDoc = SstDocument.Factory.newInstance();
-        PackagePart part = getPackagePart();
-        OutputStream out = part.getOutputStream();
-        _sstDoc.save(out, options);
-        out.close();
-    }
-
-    @Override
-    public void close() throws Exception {
-        stringVsIndexSTMap.clear();
-        indexVsStringSTMap.clear();
-        stringVsIndexMapDB.close();
-        indexVsStringMapDB.close();
     }
 }
