@@ -352,10 +352,13 @@ public class SXSSFWorkbook implements Workbook
                     } else {
                         if (ze.getName().equals("xl/sharedStrings.xml") && DBMappedSharedStringsTable.class.isInstance(_sharedStringSource)) {
                             DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
-                                _sst.commit();
-                                is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
-                                copyStream(is, zos);
-                                _sst.getTemp_shared_string_file().delete();
+                            //DBMappedSharedStringsTable is not registered in POIXMLDocument relations so calling commit to create sharedStringsTable xml file
+                            _sst.commit();
+                            is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
+                            copyStream(is, zos);
+                            if (_sst.getTemp_shared_string_file().delete()) {
+                                throw new IOException("Could not delete temporary file after processing: " + _sst.getTemp_shared_string_file().getName());
+                            }
                         } else {
                             copyStream(is, zos);
                         }
