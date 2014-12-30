@@ -1,5 +1,6 @@
 package org.apache.poi.xssf.model;
 
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -15,6 +16,7 @@ import java.io.*;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestDBMappedSharedStringsTableOption {
     //Streaming version of workbook
@@ -34,7 +36,7 @@ public class TestDBMappedSharedStringsTableOption {
 
     private void setupWorkBook() {
         XSSFWorkbook wb = new XSSFWorkbook();
-        workbook = new SXSSFWorkbook(wb, 2, false, true,true);
+        workbook = new SXSSFWorkbook(wb, 2, false, true, true);
     }
 
     private void setupBlankSheet() {
@@ -43,7 +45,7 @@ public class TestDBMappedSharedStringsTableOption {
 
     @After
     public void cleanup() {
-       //    outputFile.delete();
+        outputFile.delete();
     }
 
     @Test
@@ -111,14 +113,16 @@ public class TestDBMappedSharedStringsTableOption {
             FileOutputStream out = new FileOutputStream(outputFile);
             workbook.write(out);
             out.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        } catch (Exception e) {
+            assertTrue("Excel File Creation Failed: " + e.getMessage(), false);
         }
         System.out.println("File creation done...Asserting");
 
-        /*assertRows(wb, recordCount);*/
+        try {
+            assertRows(new XSSFWorkbook(outputFile), recordCount);
+        } catch (Exception e) {
+            assertTrue("Invalid Output File: " + e.getMessage(), false);
+        }
         //----
     }
 
