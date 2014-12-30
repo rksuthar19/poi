@@ -247,7 +247,7 @@ public class POIXMLDocumentPart {
      *            true, if the part shall be removed from the package if not
      *            needed any longer.
      */
-    public final boolean removeRelation(POIXMLDocumentPart part, boolean removeUnusedParts){
+    protected final boolean removeRelation(POIXMLDocumentPart part, boolean removeUnusedParts){
         String id = getRelationId(part);
         if (id == null) {
             // part is not related with this POIXMLDocumentPart

@@ -244,8 +244,10 @@ public class SXSSFWorkbook implements Workbook
     public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedStringsTable) {
         this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
         if (useDBMappedSharedStringsTable) {
-            _wb.removeRelation(_sharedStringSource, true);
-            this._sharedStringSource = (SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());
+            //_wb.removeRelation(_sharedStringSource, true);
+          /*(SharedStringsTable) _wb.createRelationship(XSSFRelation.SHARED_STRINGS, getDBMappedSSTFactory());*/
+            //need not to remove existing relation , default will be created which will be replaced at the end while writing
+            this._sharedStringSource = new DBMappedSharedStringsTable();
         }
     }
 
@@ -398,6 +400,7 @@ public class SXSSFWorkbook implements Workbook
                         if (DBMappedSharedStringsTable.class.isInstance(_sharedStringSource) && ze.getName().equals("xl/sharedStrings.xml")) {
                             DBMappedSharedStringsTable _sst = (DBMappedSharedStringsTable) _sharedStringSource;
                             if (_sst != null) {
+                                _sst.commit();
                                 is = _sst.getSharedStringInputStream(); //injecting shared string table in target output
                                 copyStream(is, zos);
                                 _sst.getTemp_shared_string_file().delete();

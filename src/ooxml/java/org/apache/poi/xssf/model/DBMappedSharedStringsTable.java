@@ -286,7 +286,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
     }
 
     @Override
-    protected void commit() throws IOException {
+    public void commit() throws IOException {
        // createDefaultSSTTableXml();
         FileOutputStream sharedStringOutputStream = getSharedStringsTableOutputStream();
         writeTo(sharedStringOutputStream);
