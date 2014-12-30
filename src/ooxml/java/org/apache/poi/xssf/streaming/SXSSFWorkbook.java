@@ -220,6 +220,30 @@ public class SXSSFWorkbook implements Workbook
         }
     }
 
+    /**
+     * Constructs an workbook from an existing workbook.
+     * <p>
+     * When a new node is created via createRow() and the total number
+     * of unflushed records would exceed the specified value, then the
+     * row with the lowest index value is flushed and cannot be accessed
+     * via getRow() anymore.
+     * </p>
+     * <p>
+     * A value of -1 indicates unlimited access. In this case all
+     * records that have not been flushed by a call to flush() are available
+     * for random access.
+     * <p>
+     * <p></p>
+     * A value of 0 is not allowed because it would flush any newly created row
+     * without having a chance to specify any cells.
+     * </p>
+     *
+     * @param workbook  the template workbook
+     * @param rowAccessWindowSize
+     * @param compressTmpFiles whether to use gzip compression for temporary files
+     * @param useSharedStringsTable whether to use a shared strings table
+     * @param useDBMappedSharedString whether to use default in memory SharedStringsTable or low footprint MapDB based DBMappedSharedStringsTable
+     */
     public SXSSFWorkbook(XSSFWorkbook workbook, int rowAccessWindowSize, boolean compressTmpFiles, boolean useSharedStringsTable, boolean useDBMappedSharedString) {
         this(workbook, rowAccessWindowSize, compressTmpFiles, useSharedStringsTable);
         if (useDBMappedSharedString) {

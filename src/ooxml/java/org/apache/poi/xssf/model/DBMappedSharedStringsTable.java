@@ -39,10 +39,10 @@ import java.util.List;
 
 /**
  * SharedStringsTable With Map DB implementation
- * </p>
- *
+ * To reduce memory footprint of POI’s shared strings table
+ * It flows data to disk as per availability of memory (Reference)
  */
-public class DBMappedSharedStringsTable extends SharedStringsTable implements AutoCloseable{
+public class DBMappedSharedStringsTable extends SharedStringsTable implements AutoCloseable {
 
     /**
      * Maps strings and their indexes in the <code>stringVsIndexSTMap</code> map db
@@ -232,6 +232,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
         indexVsStringSTMap.put(uniqueCount, s);
         return uniqueCount++;
     }
+
     /**
      * Provide low-level access to the underlying array of CTRst beans
      *
@@ -287,7 +288,7 @@ public class DBMappedSharedStringsTable extends SharedStringsTable implements Au
 
     @Override
     public void commit() throws IOException {
-       // createDefaultSSTTableXml();
+        // createDefaultSSTTableXml();
         FileOutputStream sharedStringOutputStream = getSharedStringsTableOutputStream();
         writeTo(sharedStringOutputStream);
         sharedStringOutputStream.close();
